@@ -14,14 +14,7 @@ def countdown(t):
         time.sleep(1)
 
 
-try:
-    print("正在连接设备")
-    device = os.popen("adb devices").readlines()
-    device_id = device[1]
-    print(device_id.split()[0])
-except IndexError:
-    print('重启手机')
-    os.system('adb shell reboot')
+
 
 
 def click_text(self, str, sq=0):  # 对于无法直接点击的控件写了个函数
@@ -29,6 +22,7 @@ def click_text(self, str, sq=0):  # 对于无法直接点击的控件写了个�
     x, y = path.center()
     d.click(x, y)
     return str
+
 
 
 # 发件人信息
@@ -66,6 +60,9 @@ class MY():
         region_image.save(self.file_path)
         print('\n重新截取屏幕')
 
+    def remove_whitespace(self,text):
+        return text.replace('\n', '').strip()
+
     def 识别图片(self):
         from PIL import Image
         import pytesseract
@@ -96,6 +93,23 @@ class MY():
         print(self.image_text[15:19])
         return self.image_text[15:19]
 
+    def 识别图片2(self):
+        from PIL import Image
+        import pytesseract
+
+        pytesseract.pytesseract.tesseract_cmd = r'C:\Users\Administrator\Desktop\Tesseract-OCR\tesseract.exe'
+
+        file_path = self.file_path
+        img = Image.open(file_path)
+        config = r'-c tessedit_char_whitelist=0123456789 --psm 6'
+        self.count1 = pytesseract.image_to_string(img, config=config)
+        self.image_text = pytesseract.image_to_string(Image.open(file_path), lang='chi_sim')
+        self.text_with = self.remove_whitespace(self.image_text)
+        # 打印结果
+        print(self.text_with)
+        # print(self.image_text[:15])
+        return self.text_with
+
 
 def click(text1):
     global sender_email, sender_password, recipient_email, msg
@@ -114,7 +128,9 @@ def click(text1):
     click_text(d, '打卡')
     print('\n找到打卡页面')
     countdown(30)
-    if d(text="不在打卡范围内").exists(timeout=2) or d(text="正在搜索蓝牙考勤机信号...").exists(timeout=2):
+    MY().截图()
+    MY().识别图片()
+    if d(text="不在打卡范围内").exists(timeout=2):
         count = 0
         while True:
             print('\n' + str(count))
@@ -122,25 +138,24 @@ def click(text1):
             print('\n返回')
             click_text(d, '打卡')
             print('点击打卡页面按钮')
-            print('找到打卡页面')
-            d(text=f"{text1}").exists(timeout=2)
-            countdown(70)
+            countdown(40)
+            d(text=f"{text1}").click_exists(timeout=5.0)
             MY().截图()
             count += 1
             if MY().识别图片() != '不在打卡范围内':
+                print("跳出循环")
                 break
             continue
     if d(text="下班·正常").exists(timeout=2) or d(text="下班自动打卡·正常").exists(timeout=2):
         print('\n已打下班卡')
         MY().截图()
-        body1 = MY().识别图片()
+        body1 = MY().识别图片2()
         d.app_stop("com.tencent.mm")
         d.app_stop("com.tencent.wework")
         os.system('adb shell svc bluetooth disable')
         os.system('adb shell settings put secure location_mode 0')
         os.system('adb shell input keyevent 26')
-        body = f"{body1}"
-        msg['Subject'] = f'{time.strftime("%H点%M分")}{body}'
+        msg['Subject'] = f'{body1}'
         # msg.attach(MIMEText(body, 'plain'))
         with open(f"{MY().file_path}", "rb") as attachment:
             part = MIMEApplication(attachment.read(), _subtype='png')
@@ -154,15 +169,15 @@ def click(text1):
         os._exit(0)
     elif d(text='今日打卡已完成，好好休息').exists(timeout=2):
         print('今日打卡已完成，好好休息')
+        countdown(5)
         MY().截图()
-        body1 = MY().识别图片()
+        body1 = MY().识别图片2()
         d.app_stop("com.tencent.mm")
         d.app_stop("com.tencent.wework")
         os.system('adb shell svc bluetooth disable')
         os.system('adb shell settings put secure location_mode 0')
         os.system('adb shell input keyevent 26')
-        body = f"{body1}"
-        msg['Subject'] = f'{time.strftime("%H点%M分")}{body}'
+        msg['Subject'] = f'{body1}'
         # msg.attach(MIMEText(body, 'plain'))
         with open(f"{MY().file_path}", "rb") as attachment:
             part = MIMEApplication(attachment.read(), _subtype='png')
@@ -178,16 +193,16 @@ def click(text1):
         print('\n你已在打卡范围内')
         countdown(5)
         if MY().识别图片1() == '下班打卡':
-            d(text="下班打卡").click_exists(timeout=10.0)
+            countdown(5)
+            d(text="下班打卡").click_exists(timeout=5.0)
             MY().截图()
-            body1 = MY().识别图片()
+            body1 = MY().识别图片2()
             d.app_stop("com.tencent.mm")
             d.app_stop("com.tencent.wework")
             os.system('adb shell svc bluetooth disable')
             os.system('adb shell settings put secure location_mode 0')
             os.system('adb shell input keyevent 26')
-            body = f"{body1}"
-            msg['Subject'] = f'{time.strftime("%H点%M分")}{body}'
+            msg['Subject'] = f'{body1}'
             # msg.attach(MIMEText(body, 'plain'))
             with open(f"{MY().file_path}", "rb") as attachment:
                 part = MIMEApplication(attachment.read(), _subtype='png')
@@ -200,15 +215,15 @@ def click(text1):
             print('退出程序')
             os._exit(0)
         elif MY().识别图片1() == '上班打卡':
+            countdown(5)
             MY().截图()
-            body1 = MY().识别图片1()
+            body1 = MY().识别图片2()
             d.app_stop("com.tencent.mm")
             d.app_stop("com.tencent.wework")
             os.system('adb shell svc bluetooth disable')
             os.system('adb shell settings put secure location_mode 0')
             os.system('adb shell input keyevent 26')
-            body = f"{body1}"
-            msg['Subject'] = f'{time.strftime("%H点%M分")}{body}'
+            msg['Subject'] = f'{body1}'
             with open(f"{MY().file_path}", "rb") as attachment:
                 part = MIMEApplication(attachment.read(), _subtype='png')
                 part.add_header('Content-Disposition', 'attachment', filename=MY().file_path)
@@ -278,8 +293,11 @@ def job2():
 
 
 if __name__ == "__main__":
+    print("正在连接设备")
+    device = os.popen("adb devices").readlines()
+    device_id = device[1]
+    print(device_id.split()[0])
     d = u2.connect_usb(f'{device_id.split()[0]}')
-    print(device_id.split())
     if device_id.split()[1] != 'device':
         print('设备连接失败')
         os.system('adb  kill-server')
